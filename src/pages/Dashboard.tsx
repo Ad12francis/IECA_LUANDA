@@ -67,13 +67,6 @@ export default function Dashboard() {
       Sociedade de Jovens - Sínodo Provincial de Luanda
     </p>
   </div>
-  <div className="hidden md:block">
-    <img 
-      src={logoIeca}
-      alt="Logo IECA" 
-      className="h-16 w-auto opacity-75" 
-    />
-  </div>
 </header>
 
       {/* KPI Section - Sharp Cards */}
