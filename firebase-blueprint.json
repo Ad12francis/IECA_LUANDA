@@ -1,0 +1,82 @@
+{
+  "entities": {
+    "synod": {
+      "title": "Sínodo",
+      "description": "Unidade administrativa de nível superior do sínodo provincial.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Nome do sínodo local (ex: Norte, Viana, Samba)" }
+      },
+      "required": ["name"]
+    },
+    "pastorate": {
+      "title": "Pastorado",
+      "description": "Divisão administrativa dentro de um sínodo.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Nome do pastorado" },
+        "synodId": { "type": "string", "description": "ID do sínodo a que pertence" }
+      },
+      "required": ["name", "synodId"]
+    },
+    "congregation": {
+      "title": "Congregação",
+      "description": "Comunidade local de membros.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Nome da congregação" },
+        "pastorateId": { "type": "string", "description": "ID do pastorado a que pertence" },
+        "synodId": { "type": "string", "description": "ID do sínodo a que pertence (redundante para facilidade de filtro)" }
+      },
+      "required": ["name", "pastorateId", "synodId"]
+    },
+    "member": {
+      "title": "Membro",
+      "description": "Dados individuais de cada jovem membro.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Nome completo" },
+        "gender": { "type": "string", "enum": ["MASCULINO", "FEMININO"] },
+        "birthDate": { "type": "string", "format": "date", "description": "Data de nascimento" },
+        "category": { "type": "string", "description": "Categoria de membro (Criança, Catecúmeno, etc.)" },
+        "residence": { "type": "string", "description": "Município/Bairro" },
+        "contact1": { "type": "string" },
+        "contact2": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "facebook": { "type": "string" },
+        "isDisabled": { "type": "boolean" },
+        "disabilityType": { "type": "string" },
+        "academicLevel": { "type": "string" },
+        "fieldOfStudy": { "type": "string" },
+        "academicStatus": { "type": "string" },
+        "professionalStatus": { "type": "string" },
+        "employmentType": { "type": "string" },
+        "fieldOfWork": { "type": "string" },
+        "experience": { "type": "string" },
+        "status": { "type": "string", "enum": ["ACTIVO", "NÃO ACTIVO"] },
+        "congregationId": { "type": "string" },
+        "pastorateId": { "type": "string" },
+        "synodId": { "type": "string" }
+      },
+      "required": ["name", "gender", "birthDate", "congregationId", "pastorateId", "synodId"]
+    },
+    "appUser": {
+      "title": "Utilizador do Sistema",
+      "description": "Gestores do sistema com diferentes níveis de acesso.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["MASTER", "USER"] },
+        "name": { "type": "string" }
+      },
+      "required": ["email", "role"]
+    }
+  },
+  "firestore": {
+    "synods": { "schema": "synod", "description": "Collecção de sínodos locais." },
+    "pastorates": { "schema": "pastorate", "description": "Collecção de pastorados." },
+    "congregations": { "schema": "congregation", "description": "Collecção de congregações." },
+    "members": { "schema": "member", "description": "Collecção de membros." },
+    "users": { "schema": "appUser", "description": "Utilizadores do sistema." }
+  }
+}
