@@ -42,9 +42,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (!snap.empty) {
         const userData = { id: snap.docs[0].id, ...snap.docs[0].data() } as AppUser;
+        
+        if (userData.isActive === false) {
+          console.warn("Utilizador desativado.");
+          return false;
+        }
+
+        // Salva backup local do usuário logado
+        localStorage.setItem('ieca_user_backup', JSON.stringify(userData));
+
         setUser(userData);
         localStorage.setItem('ieca_user', JSON.stringify(userData));
         return true;
+      }
+      
+      // Fallback para backup local se o login falhar por rede/quota
+      const backup = localStorage.getItem('ieca_user_backup');
+      if (backup) {
+        const bUser = JSON.parse(backup) as AppUser;
+        if (bUser.email === email.toLowerCase().trim() && bUser.password === pass) {
+           setUser(bUser);
+           return true;
+        }
       }
       // Keep master fallback for first-time setup if needed or remove it
       if (email === 'admin@sinodo.ao' && pass === 'admin123') {

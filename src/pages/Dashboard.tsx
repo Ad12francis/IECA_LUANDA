@@ -3,7 +3,6 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Member, Synod } from '../types';
 import { cn } from '../lib/utils';
-import logoIeca from "./logo_ieca.png";
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, Legend
@@ -13,21 +12,36 @@ import { motion } from 'motion/react';
 
 const COLORS = ['#3476D1', '#1E40AF', '#60A5FA', '#93C5FD', '#BFDBFE'];
 
+import { dataService } from '../services/dataService';
+
 export default function Dashboard() {
   const [members, setMembers] = useState<Member[]>([]);
   const [synods, setSynods] = useState<Synod[]>([]);
   const [loading, setLoading] = useState(true);
   const [isReady, setIsReady] = useState(false);
+  const [isLocalMode, setIsLocalMode] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
-      const memSnap = await getDocs(collection(db, 'members'));
-      const synSnap = await getDocs(collection(db, 'synods'));
-      setMembers(memSnap.docs.map(d => ({ id: d.id, ...d.data() } as Member)));
-      setSynods(synSnap.docs.map(d => ({ id: d.id, ...d.data() } as Synod)));
-      setLoading(false);
-      // Delay to ensure DOM is ready for charts
-      setTimeout(() => setIsReady(true), 100);
+      try {
+        const [mems, syns] = await Promise.all([
+          dataService.getMembers(),
+          dataService.getSynods()
+        ]);
+        
+        setMembers(mems);
+        setSynods(syns);
+        
+        // Verifica se os dados vieram do localStore (id começando com local_)
+        const hasLocalData = mems.some(m => m.id?.includes('local'));
+        setIsLocalMode(hasLocalData);
+
+      } catch (err) {
+        console.error("Erro ao carregar Dashboard:", err);
+      } finally {
+        setLoading(false);
+        setTimeout(() => setIsReady(true), 100);
+      }
     };
     fetchData();
   }, []);
@@ -49,25 +63,39 @@ export default function Dashboard() {
     count: members.filter(m => m.academicLevel === level).length
   }));
 
+  const membersByBaptism = [
+    { name: 'Batizados', value: members.filter(m => m.isBaptized).length },
+    { name: 'Não Batizados', value: members.filter(m => !m.isBaptized).length },
+  ];
+
+  const membersByCivilStatus = Array.from(new Set(members.map(m => m.civilStatus || 'N/A'))).map(status => ({
+    name: status,
+    count: members.filter(m => m.civilStatus === status).length
+  }));
+
   const stats = [
     { label: 'Total de Membros', value: members.length, icon: Users, color: 'bg-ieca-blue' },
     { label: 'Masculino', value: membersByGender[0].value, icon: UserCheck, color: 'bg-ieca-dark' },
-    { label: 'Feminino', value: membersByGender[1].value, icon: UserCheck, color: 'bg-blue-400' },
+    { label: 'Feminino', value: membersByGender[1].value, icon: UserCheck, color: 'bg-pink-500' },
     { label: 'Plena Comunhão', value: members.filter(m => m.category?.toUpperCase().includes('PLENA')).length, icon: ShieldCheck, color: 'bg-green-600' },
   ];
 
   return (
     <div className="p-8 space-y-10 max-w-7xl mx-auto">
       <header className="flex items-center justify-between border-b-2 border-ieca-blue pb-6">
-  <div className="space-y-1">
-    <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">
-      Estatísticas Gerais
-    </h2>
-    <p className="text-ieca-blue font-mono text-xs font-bold uppercase tracking-widest">
-      Sociedade de Jovens - Sínodo Provincial de Luanda
-    </p>
-  </div>
-</header>
+        <div className="space-y-1">
+          <div className="flex items-center space-x-2">
+            <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">Estatísticas Gerais</h2>
+            {isLocalMode && (
+              <span className="bg-orange-100 text-orange-600 text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse border border-orange-200">
+                MODO OFFLINE (RESILIÊNCIA)
+              </span>
+            )}
+          </div>
+          <p className="text-ieca-blue font-mono text-xs font-bold uppercase tracking-widest">Sociedade de Jovens - Sínodo Provincial de Luanda</p>
+        </div>
+        
+      </header>
 
       {/* KPI Section - Sharp Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -123,6 +151,43 @@ export default function Dashboard() {
                 </ResponsiveContainer>
               )}
            </div>
+        </div>
+
+        {/* Baptism Pie Chart */}
+        <div className="card-base rounded-sm p-8 bg-white border-t-4 border-ieca-blue">
+           <h3 className="font-bold text-sm uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-4 mb-6">Membros Batizados</h3>
+           <div className="h-[300px] w-full min-h-[300px] relative">
+              {isReady && (
+                <ResponsiveContainer width="99%" height="100%">
+                  <PieChart>
+                    <Pie data={membersByBaptism} innerRadius={0} outerRadius={100} dataKey="value" stroke="none">
+                      <Cell fill="#3476D1" />
+                      <Cell fill="#CBD5E1" />
+                    </Pie>
+                    <Tooltip />
+                    <Legend verticalAlign="bottom" height={36}/>
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+           </div>
+        </div>
+
+        {/* Civil Status */}
+        <div className="lg:col-span-2 card-base rounded-sm p-8 bg-white border-t-4 border-slate-400">
+          <h3 className="font-bold text-sm uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-4 mb-6">Estado Civil</h3>
+          <div className="h-[300px] w-full min-h-[300px]">
+             {isReady && (
+               <ResponsiveContainer width="99%" height="100%">
+                 <BarChart data={membersByCivilStatus}>
+                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                   <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} />
+                   <YAxis fontSize={10} axisLine={false} tickLine={false} />
+                   <Tooltip />
+                   <Bar dataKey="count" fill="#1E40AF" radius={[2, 2, 0, 0]} />
+                 </BarChart>
+               </ResponsiveContainer>
+             )}
+          </div>
         </div>
 
         {/* Education Levels */}
